@@ -139,9 +139,36 @@ void BasicDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     const auto totalInputChannels = getTotalNumInputChannels();
     const auto totalOutputChannels = getTotalNumOutputChannels();
     const auto numSamples = buffer.getNumSamples();
+    const auto delayBufferSize = delayBuffer.getNumSamples();
+    const auto delayChannelCount = juce::jmin (totalInputChannels, totalOutputChannels, delayBuffer.getNumChannels());
 
     for (auto channel = totalInputChannels; channel < totalOutputChannels; ++channel)
         buffer.clear (channel, 0, numSamples);
+
+    if (delayBufferSize == 0)
+        return;
+
+    for (auto channel = 0; channel < delayChannelCount; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer (channel);
+        auto* delayData = delayBuffer.getWritePointer (channel);
+        auto localWritePosition = writePosition;
+
+        for (auto sample = 0; sample < numSamples; ++sample)
+        {
+            const auto readPosition = (localWritePosition + delayBufferSize - delaySamples) % delayBufferSize;
+            const auto drySample = channelData[sample];
+            const auto delayedSample = delayData[readPosition];
+
+            delayData[localWritePosition] = drySample;
+            channelData[sample] = drySample + delayedSample * 0.5f;
+
+            if (++localWritePosition >= delayBufferSize)
+                localWritePosition = 0;
+        }
+    }
+
+    writePosition = (writePosition + numSamples) % delayBufferSize;
 }
 
 //==============================================================================
