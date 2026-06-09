@@ -133,40 +133,15 @@ bool BasicDelayAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 
 void BasicDelayAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    static bool hasLoggedChannelCounts = false;
-
-    if (! hasLoggedChannelCounts)
-    {
-        DBG ("Inputs: " << getTotalNumInputChannels()
-                       << " Outputs: "
-                       << getTotalNumOutputChannels());
-        hasLoggedChannelCounts = true;
-    }
-
     juce::ScopedNoDenormals noDenormals;
     juce::ignoreUnused (midiMessages);
 
     const auto totalInputChannels = getTotalNumInputChannels();
     const auto totalOutputChannels = getTotalNumOutputChannels();
-    const auto passThroughNumSamples = buffer.getNumSamples();
-
-    float inputPeak = 0.0f;
-
-    for (auto channel = 0; channel < totalInputChannels; ++channel)
-    {
-        const auto* channelData = buffer.getReadPointer (channel);
-
-        for (auto sample = 0; sample < passThroughNumSamples; ++sample)
-            inputPeak = juce::jmax (inputPeak, std::abs (channelData[sample]));
-    }
-
-    static int inputPeakDebugCounter = 0;
-
-    if (++inputPeakDebugCounter % 30 == 0)
-        DBG ("Input peak: " << inputPeak);
+    const auto numSamples = buffer.getNumSamples();
 
     for (auto channel = totalInputChannels; channel < totalOutputChannels; ++channel)
-        buffer.clear (channel, 0, passThroughNumSamples);
+        buffer.clear (channel, 0, numSamples);
 }
 
 //==============================================================================
@@ -196,24 +171,3 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new BasicDelayAudioProcessor();
 }
-
-/*
-Temporary padding to force this Xcode overwrite to be longer than any stale editor buffer.
-This comment is harmless and can be removed with the diagnostics later.
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-................................................................................
-*/
